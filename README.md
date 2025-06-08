@@ -1,0 +1,2 @@
+# DeviceAlertApp
+ReactNativeのブリッジを使って実装する
