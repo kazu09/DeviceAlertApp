@@ -1,97 +1,131 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# DeviceAlertApp
 
-# Getting Started
+React Native Community CLIで作成したモバイルアプリです。Expoは使用していません。
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## 開発環境
 
-## Step 1: Start Metro
+- React Native 0.87.0
+- React 19.2.3
+- Node.js 24.19.0（nvmで管理）
+- CocoaPods 1.16.2
+- iOS 15.1以上
+- Android minSdk 24 / targetSdk 36
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+Node.jsのバージョンはプロジェクト直下の`.nvmrc`で指定しています。nvmのユーザー共通デフォルトを変更する必要はありません。
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## 初回セットアップ
 
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+リポジトリのルートで、プロジェクト指定のNode.jsへ切り替えて依存関係をインストールします。
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+nvm install
+nvm use
+npm ci
 ```
+
+`nvm install`は`.nvmrc`のNode.jsが未導入の場合だけ必要です。導入済みなら`nvm use`だけで切り替えられます。
 
 ### iOS
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+XcodeとCocoaPodsが必要です。CocoaPodsが利用できることを確認します。
 
 ```sh
-bundle install
+pod --version
 ```
 
-Then, and every time you update your native dependencies, run:
+初回セットアップ時、またはネイティブ依存関係を変更したときにPodsを更新します。
 
 ```sh
-bundle exec pod install
+cd ios
+pod install
+cd ..
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Xcodeで開く場合は、`ios/DeviceAlertApp.xcworkspace`を使用してください。
+
+### Android
+
+Android Studio、Android SDK、エミュレータが必要です。`android/local.properties`は各PC固有のSDKパスを指定するファイルなので、Gitにはコミットしません。
+
+例：このPCの`Pixel_8`エミュレータを起動する場合
 
 ```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+~/Library/Android/sdk/emulator/emulator @Pixel_8
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## アプリの起動
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Metroとアプリを別々のターミナルで起動すると、状態を把握しやすくなります。
 
-## Step 3: Modify your app
+ターミナル1：
 
-Now that you have successfully run the app, let's make changes!
+```sh
+nvm use
+npm start
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+ターミナル2（iOS）：
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+```sh
+nvm use
+npm run ios -- --no-packager
+```
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+特定のシミュレータを指定する場合：
 
-## Congratulations! :tada:
+```sh
+npm run ios -- --simulator "iPhone 17 Pro" --no-packager
+```
 
-You've successfully run and modified your React Native App. :partying_face:
+ターミナル2（Android）：
 
-### Now what?
+```sh
+nvm use
+npm run android -- --no-packager
+```
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+Metroを自動起動させる場合は、`--no-packager`を付けずに`npm run ios`または`npm run android`を実行できます。
 
-# Troubleshooting
+## テストと静的解析
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+```sh
+npm run lint
+npm test
+```
 
-# Learn More
+## トラブルシューティング
 
-To learn more about React Native, take a look at the following resources:
+### 更新後にMetroのモジュール解決エラーが発生する
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+React Nativeや`node_modules`を更新したあと、更新前のMetroが残っていると、`AssetRegistry could not be found`などのエラーが発生することがあります。
+
+起動中のMetroを`Ctrl+C`で停止し、キャッシュをリセットして再起動します。
+
+```sh
+nvm use
+npm start -- --reset-cache
+```
+
+Metroがポート8081で動いているか確認する場合：
+
+```sh
+lsof -nP -iTCP:8081 -sTCP:LISTEN
+```
+
+### iOSの依存関係を更新した
+
+```sh
+cd ios
+pod install
+cd ..
+```
+
+### Fast Refreshで反映されない
+
+Metroのターミナルで`r`を押すと、接続中のアプリをリロードできます。
+
+## 参考資料
+
+- [React Native documentation](https://reactnative.dev/docs/getting-started)
+- [React Native environment setup](https://reactnative.dev/docs/set-up-your-environment)
+- [CocoaPods](https://cocoapods.org/)
