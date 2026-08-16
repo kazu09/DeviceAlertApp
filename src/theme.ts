@@ -5,6 +5,7 @@ export type AppTheme = {
     surface: string;
     surfaceMuted: string;
     primary: string;
+    onPrimary: string;
     primarySoft: string;
     text: string;
     textMuted: string;
@@ -15,6 +16,7 @@ export type AppTheme = {
     warning: string;
     warningSoft: string;
     danger: string;
+    disabledColor: string;
   };
 };
 
@@ -27,6 +29,7 @@ export function createTheme(isDark: boolean): AppTheme {
         surface: '#111E2E',
         surfaceMuted: '#17263A',
         primary: '#7EA2FF',
+        onPrimary: '#09121F',
         primarySoft: '#1D3158',
         text: '#F4F7FB',
         textMuted: '#93A4B8',
@@ -37,6 +40,7 @@ export function createTheme(isDark: boolean): AppTheme {
         warning: '#FFC56A',
         warningSoft: '#45351D',
         danger: '#FF8585',
+        disabledColor: '#CCCCCC',
       },
     };
   }
@@ -48,6 +52,7 @@ export function createTheme(isDark: boolean): AppTheme {
       surface: '#FFFFFF',
       surfaceMuted: '#F7F9FC',
       primary: '#315FD6',
+      onPrimary: '#FFFFFF',
       primarySoft: '#E8EEFF',
       text: '#13243A',
       textMuted: '#68788C',
@@ -58,6 +63,7 @@ export function createTheme(isDark: boolean): AppTheme {
       warning: '#C77B12',
       warningSoft: '#FFF1D8',
       danger: '#D94848',
+      disabledColor: '#CCCCCC',
     },
   };
 }

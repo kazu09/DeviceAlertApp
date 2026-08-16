@@ -8,12 +8,15 @@ import {
   AppThemeProvider,
   useAppTheme,
 } from './src/providers/AppThemeProvider';
+import {UsageProvider} from './src/providers/UsageProvider';
 
 function App() {
   return (
     <SafeAreaProvider>
       <AppThemeProvider>
-        <AppContent />
+        <UsageProvider>
+          <AppContent />
+        </UsageProvider>
       </AppThemeProvider>
     </SafeAreaProvider>
   );

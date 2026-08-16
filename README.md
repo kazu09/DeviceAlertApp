@@ -9,7 +9,7 @@ React Native Community CLIで作成したモバイルアプリです。Expoは�
 - Node.js 24.19.0（nvmで管理）
 - CocoaPods 1.16.2
 - iOS 15.1以上
-- Android minSdk 24 / targetSdk 36
+- Android minSdk 30 / targetSdk 36
 
 Node.jsのバージョンはプロジェクト直下の`.nvmrc`で指定しています。nvmのユーザー共通デフォルトを変更する必要はありません。
 
@@ -46,6 +46,8 @@ Xcodeで開く場合は、`ios/DeviceAlertApp.xcworkspace`を使用してくだ�
 ### Android
 
 Android Studio、Android SDK、エミュレータが必要です。`android/local.properties`は各PC固有のSDKパスを指定するファイルなので、Gitにはコミットしません。
+
+Android Studioではプロジェクト直下ではなく`android`フォルダを開いてください。Gradleは`scripts/node-with-nvm.sh`を通して`.nvmrc`で指定したNode.jsを使用するため、Node.jsをグローバルにインストールする必要はありません。
 
 例：このPCの`Pixel_8`エミュレータを起動する場合
 
@@ -86,6 +88,45 @@ npm run android -- --no-packager
 
 Metroを自動起動させる場合は、`--no-packager`を付けずに`npm run ios`または`npm run android`を実行できます。
 
+## モバイル通信量の取得
+
+Androidでは、端末が記録したモバイル通信量を自動取得します。初回はホーム画面または設定画面の「設定を開く」を押し、Androidの設定でDeviceAlertAppの「使用状況へのアクセス」を許可してください。アプリへ戻ると自動で再取得します。
+
+取得対象はモバイル回線のダウンロード量とアップロード量の合計です。Wi-Fi通信量は含みません。表示上の`1 GB`は`1,000,000,000 bytes`として換算しています。
+
+画面ごとの集計期間は次のとおりです。
+
+- ホームの合計：今月1日から現在まで
+- ホームのグラフ：今日を含む直近7日間
+- 履歴の日別：今月1日から今日まで
+- 履歴の週別：今週を含む直近7週間（月曜始まり）
+- 履歴の月別：今月を含む直近6か月
+
+日別と月別の前月比、週別の前週比は、進行中の期間同士で条件を揃えるため同じ経過時点までを比較します。
+
+エミュレータには通常モバイル回線の利用履歴がないため、通信量が`0 MB`と表示されても問題ありません。実際の通信量はAndroid実機で確認してください。端末側の集計値を使うため、通信事業者の請求画面とは集計期間や計測方法によって差が出ることがあります。
+
+iOSではアプリから端末全体のモバイル通信量を取得できないため、現在は手動管理です。
+
+### Androidの通信量取得ログ
+
+Debugビルドでは、権限確認、取得期間、取得結果を`NetworkUsage`タグでLogcatへ出力します。リリースビルドでは出力しません。
+
+Android StudioのLogcatでは、次のクエリで通信量取得ログだけに絞り込めます。
+
+```text
+tag:NetworkUsage
+```
+
+ターミナルから確認する場合は、接続中の端末IDを指定します。
+
+```sh
+adb devices
+adb -s <device-id> logcat -s NetworkUsage
+```
+
+ログの`Query #1`のような番号は、非同期に実行される開始ログと完了ログを対応づけるためのものです。
+
 ## テストと静的解析
 
 ```sh
@@ -123,6 +164,17 @@ cd ..
 ### Fast Refreshで反映されない
 
 Metroのターミナルで`r`を押すと、接続中のアプリをリロードできます。
+
+### AndroidのNative Moduleを追加・変更した
+
+Native ModuleのCodegen生成物が古い場合は、Androidのビルドを一度クリーンにしてから再起動します。
+
+```sh
+cd android
+./gradlew clean
+cd ..
+npm run android -- --no-packager
+```
 
 ## 参考資料
 
