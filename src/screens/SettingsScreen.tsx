@@ -10,23 +10,47 @@ import {
 } from 'react-native';
 import {Card} from '../components/Card';
 import {useAppTheme} from '../providers/AppThemeProvider';
+import {useUsage} from '../providers/UsageProvider';
 import type {AppTheme} from '../theme';
 
 export function SettingsScreen() {
   const theme = useAppTheme();
+  const {
+    error,
+    refresh,
+    requestUsageAccess,
+    setLimitGb,
+    status,
+    summary,
+  } = useUsage();
   const styles = createStyles(theme);
-  const [limitGb, setLimitGb] = useState(20);
   const [alert50, setAlert50] = useState(false);
   const [alert80, setAlert80] = useState(true);
   const [alert100, setAlert100] = useState(true);
   const isAndroid = Platform.OS === 'android';
+  const permissionGranted = status === 'ready';
+  const isLoading = status === 'loading';
+
+  const handleDataSourcePress = () => {
+    if (status === 'permissionRequired' || status === 'idle') {
+      requestUsageAccess();
+      return;
+    }
+
+    refresh();
+  };
 
   const switchProps = {
+    // trackColor: {
+    //   false: theme.colors.track,
+    //   true: theme.colors.primarySoft,
+    // },
+    // thumbColor: theme.colors.primary,
     trackColor: {
-      false: theme.colors.track,
-      true: theme.colors.primarySoft,
+      false: theme.colors.disabledColor,
+      true: theme.colors.disabledColor,
     },
-    thumbColor: theme.colors.primary,
+    thumbColor: theme.colors.disabledColor,
   };
 
   return (
@@ -50,14 +74,14 @@ export function SettingsScreen() {
           <View style={styles.stepper}>
             <Pressable
               accessibilityLabel="データ上限を1GB減らす"
-              onPress={() => setLimitGb(value => Math.max(1, value - 1))}
+              onPress={() => setLimitGb(summary.limitGb - 1)}
               style={styles.stepButton}>
               <Text style={styles.stepButtonText}>−</Text>
             </Pressable>
-            <Text style={styles.limitValue}>{limitGb} GB</Text>
+            <Text style={styles.limitValue}>{summary.limitGb} GB</Text>
             <Pressable
               accessibilityLabel="データ上限を1GB増やす"
-              onPress={() => setLimitGb(value => value + 1)}
+              onPress={() => setLimitGb(summary.limitGb + 1)}
               style={styles.stepButton}>
               <Text style={styles.stepButtonText}>＋</Text>
             </Pressable>
@@ -75,7 +99,7 @@ export function SettingsScreen() {
         </View>
       </Card>
 
-      <Text style={styles.sectionLabel}>通知</Text>
+      <Text style={styles.sectionLabel}>通知(開発中)</Text>
       <Card style={styles.switchCard}>
         <SettingSwitch
           description="早めに使用ペースを確認します"
@@ -118,15 +142,49 @@ export function SettingsScreen() {
                 : '手入力またはスクリーンショットで更新します'}
             </Text>
           </View>
-          <View style={styles.activeBadge}>
-            <Text style={styles.activeBadgeText}>
-              {isAndroid ? '有効' : '設定済み'}
+          <View
+            style={[
+              styles.activeBadge,
+              isAndroid && !permissionGranted
+                ? styles.inactiveBadge
+                : undefined,
+            ]}>
+            <Text
+              style={[
+                styles.activeBadgeText,
+                isAndroid && !permissionGranted
+                  ? styles.inactiveBadgeText
+                  : undefined,
+              ]}>
+              {isAndroid
+                ? permissionGranted
+                  ? '有効'
+                  : isLoading
+                    ? '確認中'
+                    : '要設定'
+                : '設定済み'}
             </Text>
           </View>
         </View>
-        <Pressable style={styles.permissionButton}>
+        {isAndroid && error ? (
+          <Text style={styles.permissionError}>{error}</Text>
+        ) : null}
+        <Pressable
+          accessibilityRole="button"
+          disabled={isAndroid && isLoading}
+          onPress={isAndroid ? handleDataSourcePress : undefined}
+          style={[
+            styles.permissionButton,
+            isAndroid && isLoading ? styles.buttonDisabled : undefined,
+          ]}>
           <Text style={styles.permissionButtonText}>
-            {isAndroid ? 'アクセス権限を確認' : '使用量を更新'}
+            {isAndroid
+              ? isLoading
+                ? '確認中…'
+                : permissionGranted
+                  ? '通信量を再取得'
+                  : 'アクセス設定を開く'
+              : '使用量を更新'}
           </Text>
         </Pressable>
       </Card>
@@ -173,6 +231,7 @@ function SettingSwitch({
         thumbColor={thumbColor}
         trackColor={trackColor}
         value={value}
+        disabled={true}
       />
     </View>
   );
@@ -328,12 +387,27 @@ function createStyles(theme: AppTheme) {
       fontSize: 10,
       fontWeight: '700',
     },
+    inactiveBadge: {
+      backgroundColor: theme.colors.warningSoft,
+    },
+    inactiveBadgeText: {
+      color: theme.colors.warning,
+    },
+    permissionError: {
+      color: theme.colors.danger,
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 14,
+    },
     permissionButton: {
       alignItems: 'center',
       backgroundColor: theme.colors.primary,
       borderRadius: 13,
       marginTop: 18,
       paddingVertical: 12,
+    },
+    buttonDisabled: {
+      opacity: 0.55,
     },
     permissionButtonText: {
       color: '#FFFFFF',

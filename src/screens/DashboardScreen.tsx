@@ -1,17 +1,54 @@
-import {Platform, ScrollView, StyleSheet, Text, View} from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import {Card} from '../components/Card';
 import {ProgressBar} from '../components/ProgressBar';
 import {UsageChart} from '../components/UsageChart';
-import {recentUsage, usageSummary} from '../data/mockUsage';
 import {useAppTheme} from '../providers/AppThemeProvider';
+import {useUsage} from '../providers/UsageProvider';
 import type {AppTheme} from '../theme';
 
 export function DashboardScreen() {
   const theme = useAppTheme();
+  const {
+    error,
+    recentUsage,
+    refresh,
+    requestUsageAccess,
+    status,
+    summary: usageSummary,
+  } = useUsage();
   const styles = createStyles(theme);
   const progress = (usageSummary.usedGb / usageSummary.limitGb) * 100;
-  const remainingGb = usageSummary.limitGb - usageSummary.usedGb;
+  const remainingGb = Math.max(
+    usageSummary.limitGb - usageSummary.usedGb,
+    0,
+  );
+  const recentTotalGb = recentUsage.reduce(
+    (total, item) => total + item.amountGb,
+    0,
+  );
+  const recentPeriod =
+    recentUsage.length > 0
+      ? `${recentUsage[0].date}〜${recentUsage[recentUsage.length - 1].date}`
+      : '';
   const isAndroid = Platform.OS === 'android';
+  const needsPermission = isAndroid && status === 'permissionRequired';
+  const hasError = isAndroid && status === 'error';
+  const sourceLabel = !isAndroid
+    ? '手入力'
+    : status === 'ready'
+      ? '自動取得'
+      : status === 'loading'
+        ? '取得中'
+        : needsPermission
+          ? '権限が必要'
+          : '未取得';
 
   return (
     <ScrollView
@@ -22,13 +59,55 @@ export function DashboardScreen() {
           <Text style={styles.eyebrow}>2026年8月</Text>
           <Text style={styles.title}>データ使用量</Text>
         </View>
-        <View style={styles.sourceBadge}>
-          <View style={styles.statusDot} />
-          <Text style={styles.sourceText}>
-            {isAndroid ? '自動取得' : '手入力'}
+        <View
+          style={[
+            styles.sourceBadge,
+            needsPermission || hasError ? styles.sourceBadgeWarning : undefined,
+          ]}>
+          <View
+            style={[
+              styles.statusDot,
+              needsPermission || hasError ? styles.statusDotWarning : undefined,
+            ]}
+          />
+          <Text
+            style={[
+              styles.sourceText,
+              needsPermission || hasError
+                ? styles.sourceTextWarning
+                : undefined,
+            ]}>
+            {sourceLabel}
           </Text>
         </View>
       </View>
+
+      {needsPermission || hasError ? (
+        <Card style={styles.noticeCard}>
+          <View style={styles.noticeCopy}>
+            <Text style={styles.noticeTitle}>
+              {needsPermission
+                ? '通信量へのアクセスを許可してください'
+                : '通信量を取得できませんでした'}
+            </Text>
+            <Text style={styles.noticeDescription}>
+              {needsPermission
+                ? 'Androidの設定画面で、このアプリの使用状況へのアクセスを有効にします。'
+                : error ?? '時間をおいてもう一度お試しください。'}
+            </Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              needsPermission ? requestUsageAccess() : refresh();
+            }}
+            style={styles.noticeButton}>
+            <Text style={styles.noticeButtonText}>
+              {needsPermission ? '設定を開く' : '再試行'}
+            </Text>
+          </Pressable>
+        </Card>
+      ) : null}
 
       <Card style={styles.usageCard}>
         <View style={styles.periodRow}>
@@ -36,7 +115,9 @@ export function DashboardScreen() {
           <Text style={styles.updated}>更新 {usageSummary.updatedAt}</Text>
         </View>
         <View style={styles.usageValueRow}>
-          <Text style={styles.usageValue}>{usageSummary.usedGb}</Text>
+          <Text style={styles.usageValue}>
+            {usageSummary.usedGb.toFixed(2)}
+          </Text>
           <View style={styles.usageUnitBlock}>
             <Text style={styles.usageUnit}>GB</Text>
             <Text style={styles.limit}>/ {usageSummary.limitGb} GB</Text>
@@ -55,10 +136,16 @@ export function DashboardScreen() {
         </View>
         <View style={styles.forecastCopy}>
           <Text style={styles.cardLabel}>月末予測</Text>
-          <Text style={styles.forecastMessage}>このペースなら上限以内です</Text>
+          <Text style={styles.forecastMessage}>
+            {usageSummary.forecastGb > usageSummary.limitGb
+              ? 'このペースでは上限を超える見込みです'
+              : 'このペースなら上限以内です'}
+          </Text>
         </View>
         <View style={styles.forecastValueBlock}>
-          <Text style={styles.forecastValue}>{usageSummary.forecastGb}</Text>
+          <Text style={styles.forecastValue}>
+            {usageSummary.forecastGb.toFixed(1)}
+          </Text>
           <Text style={styles.forecastUnit}>GB</Text>
         </View>
       </Card>
@@ -66,12 +153,14 @@ export function DashboardScreen() {
       <View style={styles.statGrid}>
         <Card style={styles.statCard}>
           <Text style={styles.cardLabel}>今日</Text>
-          <Text style={styles.statValue}>{usageSummary.todayMb}</Text>
+          <Text style={styles.statValue}>{Math.round(usageSummary.todayMb)}</Text>
           <Text style={styles.statUnit}>MB</Text>
         </Card>
         <Card style={styles.statCard}>
           <Text style={styles.cardLabel}>1日平均</Text>
-          <Text style={styles.statValue}>{usageSummary.dailyAverageMb}</Text>
+          <Text style={styles.statValue}>
+            {Math.round(usageSummary.dailyAverageMb)}
+          </Text>
           <Text style={styles.statUnit}>MB</Text>
         </Card>
       </View>
@@ -79,10 +168,12 @@ export function DashboardScreen() {
       <Card>
         <View style={styles.sectionHeader}>
           <View>
-            <Text style={styles.sectionTitle}>最近7日間</Text>
-            <Text style={styles.sectionCaption}>モバイルデータ通信</Text>
+            <Text style={styles.sectionTitle}>直近7日間（今日を含む）</Text>
+            <Text style={styles.sectionCaption}>
+              {recentPeriod} · モバイルデータ通信
+            </Text>
           </View>
-          <Text style={styles.sectionTotal}>4.16 GB</Text>
+          <Text style={styles.sectionTotal}>{recentTotalGb.toFixed(2)} GB</Text>
         </View>
         <UsageChart data={recentUsage} />
       </Card>
@@ -101,12 +192,14 @@ export function DashboardScreen() {
         </Card>
       ) : null}
 
-      <View style={styles.insight}>
-        <Text style={styles.insightMark}>i</Text>
-        <Text style={styles.insightText}>
-          先週より1日あたり約80 MB少ないペースです。
-        </Text>
-      </View>
+      {!isAndroid ? (
+        <View style={styles.insight}>
+          <Text style={styles.insightMark}>i</Text>
+          <Text style={styles.insightText}>
+            先週より1日あたり約80 MB少ないペースです。
+          </Text>
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -156,6 +249,48 @@ function createStyles(theme: AppTheme) {
     sourceText: {
       color: theme.colors.success,
       fontSize: 12,
+      fontWeight: '700',
+    },
+    sourceBadgeWarning: {
+      backgroundColor: theme.colors.warningSoft,
+    },
+    statusDotWarning: {
+      backgroundColor: theme.colors.warning,
+    },
+    sourceTextWarning: {
+      color: theme.colors.warning,
+    },
+    noticeCard: {
+      alignItems: 'center',
+      backgroundColor: theme.colors.warningSoft,
+      borderColor: 'transparent',
+      flexDirection: 'row',
+      gap: 12,
+      paddingVertical: 15,
+    },
+    noticeCopy: {
+      flex: 1,
+    },
+    noticeTitle: {
+      color: theme.colors.text,
+      fontSize: 13,
+      fontWeight: '700',
+    },
+    noticeDescription: {
+      color: theme.colors.textMuted,
+      fontSize: 11,
+      lineHeight: 16,
+      marginTop: 4,
+    },
+    noticeButton: {
+      backgroundColor: theme.colors.surface,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 9,
+    },
+    noticeButtonText: {
+      color: theme.colors.warning,
+      fontSize: 11,
       fontWeight: '700',
     },
     usageCard: {

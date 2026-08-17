@@ -1,6 +1,6 @@
 import {StyleSheet, Text, View} from 'react-native';
-import type {DailyUsage} from '../data/mockUsage';
 import {useAppTheme} from '../providers/AppThemeProvider';
+import type {DailyUsage} from '../types/usage';
 
 type Props = {
   data: DailyUsage[];

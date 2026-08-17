@@ -1,6 +1,18 @@
 pluginManagement { includeBuild("../node_modules/@react-native/gradle-plugin") }
 plugins { id("com.facebook.react.settings") }
-extensions.configure(com.facebook.react.ReactSettingsExtension){ ex -> ex.autolinkLibrariesFromCommand() }
+
+// macOSから直接起動したAndroid StudioはnvmのPATHを引き継がないため、
+// autolinkingもプロジェクトの.nvmrcを読むラッパー経由で実行する。
+def nodeWithNvm = file("../scripts/node-with-nvm.sh")
+def reactNativeCli = file("../node_modules/@react-native-community/cli/build/bin.js")
+extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
+    ex.autolinkLibrariesFromCommand([
+        "/bin/sh",
+        nodeWithNvm.absolutePath,
+        reactNativeCli.absolutePath,
+        "config",
+    ])
+}
 rootProject.name = 'DeviceAlertApp'
 include ':app'
 includeBuild('../node_modules/@react-native/gradle-plugin')
